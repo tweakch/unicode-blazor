@@ -1,1 +1,3 @@
-# unicode-blazor
+# UnicodeBlazor
+
+Stop browsing Unicode Tables.

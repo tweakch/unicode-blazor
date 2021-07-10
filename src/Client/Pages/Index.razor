@@ -1,0 +1,31 @@
+﻿@page "/"
+@using UnicodeBlazor.Shared
+@inject HttpClient Http
+
+<h1>Hello, Unicode!</h1>
+
+The latest version is "<code>@version</code>" with <code>@count</code> entries.
+
+<SurveyPrompt Title="How is Blazor working for you?" />
+<button class="btn btn-primary" @onclick="UpdateClicked">Update</button>
+<a href="ucd/index/latest">Get Latest Index</a>
+
+@code {
+
+    string version;
+    string count;
+    string message;
+
+    protected async Task UpdateClicked()
+    {
+        var response = await Http.PostAsJsonAsync<UpdateIndexRequest>($"ucd/{version}/index/download", new UpdateIndexRequest() { Version = version });
+        var uir = await response.Content.ReadFromJsonAsync<UpdateIndexResponse>();
+        message = uir.Message;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        version = await Http.GetStringAsync("ucd/version/latest");
+        count = await Http.GetStringAsync($"ucd/{version}/index/count");
+    }
+}
