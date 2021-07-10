@@ -10,6 +10,8 @@ namespace UnicodeBlazor.Server
 {
     public class UCDService
     {
+
+
         private readonly HttpClient _client;
         private readonly UnicodeBlazorContext _context;
 
@@ -29,10 +31,14 @@ namespace UnicodeBlazor.Server
         {
             return GetUcdFileAsync(version, "Blocks.txt");
         }
-        
+
         public Task<Stream> GetIndexAsync(string version)
         {
             return GetUcdFileAsync(version, "Index.txt");
+        }
+        public Task<Stream> GetDataAsync(string version)
+        {
+            return GetUcdFileAsync(version, "UnicodeData.txt");
         }
 
         private Task<Stream> GetUcdFileAsync(string version, string filename)
@@ -47,19 +53,19 @@ namespace UnicodeBlazor.Server
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
-                
-                if(string.IsNullOrEmpty(line) || line.StartsWith("#"))
+
+                if (string.IsNullOrEmpty(line) || line.StartsWith("#"))
                 {
                     continue;
                 }
                 var parts = line.Split(";");
                 var range = parts[0].Split("..");
                 var name = parts[1].Trim();
-                                
+
                 var start = range[0];
                 var end = range[1];
                 var entry = await _context.Blocks.FindAsync(name);
-                if(entry == null)
+                if (entry == null)
                 {
                     await _context.Blocks.AddAsync(new Shared.UnicodeBlockEntry(name, start, end));
                     await _context.SaveChangesAsync();
@@ -71,38 +77,36 @@ namespace UnicodeBlazor.Server
 
         public async Task<int> UpdateIndexAsync(Stream index)
         {
-            int numEntries = 0;
-
             var blocks = _context.Blocks.OrderBy(b => b.Start).ToDictionary(b => b.Start, b => b);
 
             using StreamReader reader = new(index);
             while (!reader.EndOfStream)
             {
-                // update entries here...
                 var line = await reader.ReadLineAsync();
                 var values = line.Split("\t");
                 var name = values[0];
+
                 try
                 {
                     var codepos = Convert.ToInt32(values[1], 16);
-                    var entry = await _context.Entries.FindAsync(name,codepos);
+                    var entry = await _context.Entries.FindAsync(name, codepos);
 
                     if (entry == null)
                     {
-                        var key = blocks.Keys.First(b => b >= codepos); 
-                        await _context.Entries.AddAsync(new Shared.UnicodeCharacterEntry() { Name = name, Codepos = codepos, Block = blocks[key]});
+                        var key = blocks.Keys.First(b => b >= codepos);
+                        await _context.Entries.AddAsync(new Shared.UnicodeCharacterEntry() { Name = name, Codepos = codepos, Block = blocks[key] });
                     }
-
-                    numEntries++;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // ignore betty BOOP
+                    if (name == "Betty" && values[1] == "BOOP") continue; // ignore betty BOOP
+                    if (name == "the" && values[1] == "DOOD") continue; // ignore the DOOD
+                    throw;
                 }
             }
 
             await _context.SaveChangesAsync();
-            return numEntries;
+            return _context.Entries.Count();
         }
 
         public async Task<string> CountIndexAsync(string version)

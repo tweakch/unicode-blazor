@@ -29,6 +29,11 @@ namespace UnicodeBlazor.Server.Controllers
         {
             return await _service.GetIndexAsync(version);
         }
+        [HttpGet("{version}/data")]
+        public async Task<Stream> GetData(string version)
+        {
+            return await _service.GetDataAsync(version);
+        }
 
         [HttpPost("{version}/index/download")]
         public async Task<UpdateIndexResponse> DownloadIndex(string version, [FromBody] UpdateIndexRequest model)
